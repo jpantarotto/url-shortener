@@ -1,19 +1,24 @@
 package main
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
 	"net/http"
+	"os"
+
+	"github.com/jpantarotto/url-shortener/config"
+	"github.com/jpantarotto/url-shortener/db"
 )
 
 type InputUrl struct {
 	URL string `json:"url"`
 }
 
-type TinyUrlResponse struct {
+type TinyUrl struct {
 	Original string `json:"orignal"`
 	Tiny     string `json:"tiny"`
 }
@@ -84,7 +89,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 
 	urls[base62String] = input.URL
 
-	responseData := TinyUrlResponse{
+	responseData := TinyUrl{
 		Original: input.URL,
 		Tiny:     base62String,
 	}
@@ -102,6 +107,20 @@ func create(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Printf("Unable to load config")
+		fmt.Fprintf(os.Stderr, "Unable to load config: %v\n", err)
+		os.Exit(1)
+	}
+
+	conn, err := db.Connect(cfg.DB)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer conn.Close(context.Background())
+
 	port := ":4000"
 	http.HandleFunc("/create", create)
 
