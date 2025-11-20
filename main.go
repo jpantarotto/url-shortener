@@ -67,6 +67,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 	// Read the request body
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading request body: %v", err)
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
 		return
 	}
@@ -79,7 +80,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 	var input InputUrl
 	err = json.Unmarshal(jsonData, &input)
 	if err != nil {
-		fmt.Println("Error unmarshalling JSON:", err)
+		fmt.Fprintf(os.Stderr, "Error unmarshalling JSON: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
@@ -96,6 +97,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(responseData); err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding JSON: %v", err)
 		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
 		return
 	}
@@ -109,7 +111,6 @@ func create(w http.ResponseWriter, req *http.Request) {
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Printf("Unable to load config")
 		fmt.Fprintf(os.Stderr, "Unable to load config: %v\n", err)
 		os.Exit(1)
 	}
@@ -124,6 +125,6 @@ func main() {
 	port := ":4000"
 	http.HandleFunc("/create", create)
 
-	fmt.Printf("Server Running at http://lochalhost%s", port)
+	fmt.Printf("Server Running at http://lochalhost%s\n", port)
 	http.ListenAndServe(port, nil)
 }

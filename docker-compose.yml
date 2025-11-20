@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: 'postgres:latest'
+    volumes:
+      - ./pgdata:/var/lib/postgresql
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: potent_potables_1234
