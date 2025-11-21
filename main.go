@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/big"
 	"net/http"
 	"os"
 
@@ -24,19 +22,19 @@ type TinyUrl struct {
 }
 
 var urls = make(map[string]string)
+var counter int64
 
 const Base62Alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func encodeToBase62(data []byte) string {
-	num := new(big.Int).SetBytes(data)             // convert the byte slice to a Big Int
-	result := make([]byte, 0)                      // initialize result byte slice
-	base := big.NewInt(int64(len(Base62Alphabet))) // create big int with value of len(alphabet) == 62
+func encodeToBase62(num int64) string {
+	result := make([]byte, 0)          // initialize result byte slice
+	base := int64(len(Base62Alphabet)) // create int64 with value of len(alphabet) == 62
 
 	// while num (dividend) is greater than zero
-	for num.Cmp(big.NewInt(0)) > 0 {
-		remainder := new(big.Int)
-		num.QuoRem(num, base, remainder)
-		result = append(result, Base62Alphabet[remainder.Int64()])
+	for num > 0 {
+		num = num / base
+		remainder := num % base
+		result = append(result, Base62Alphabet[remainder])
 	}
 	// reverse the result []byte with no extra space
 	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
@@ -50,13 +48,10 @@ func encodeToBase62(data []byte) string {
 	return string(result)
 }
 
-func createSha256Hash(input string) []byte {
-	hasher := md5.New()
-	hasher.Write([]byte(input))
-	hashBytes := hasher.Sum(nil)
+// func get(w http.ResponseWriter, req *http.Request) {
+// 	tinyUrl := req.PathValue("tinyUrl")
 
-	return hashBytes
-}
+// }
 
 func create(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
@@ -84,9 +79,11 @@ func create(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
+	fmt.Printf("Counter: %v", counter)
 	// Create short URL hash
-	hash := createSha256Hash(input.URL)
-	base62String := encodeToBase62(hash)
+	// hash := createSha256Hash(input.URL)
+	base62String := encodeToBase62(counter)
+	counter++
 
 	urls[base62String] = input.URL
 
@@ -122,8 +119,10 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	port := ":4000"
+	counter = cfg.CounterStart
+	port := ":" + cfg.Port
 	http.HandleFunc("/create", create)
+	// http.HandleFunc("GET /{tinyUrl}", get)
 
 	fmt.Printf("Server Running at http://lochalhost%s\n", port)
 	http.ListenAndServe(port, nil)
